@@ -72,7 +72,7 @@ body{
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
 button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-offset:3px;border-radius:999px}
 
-/* phase colour */
+/* phase color */
 [data-kind="inhale"],[data-kind="recover"]{--phase-c:var(--sky)}
 [data-kind="exhale"]{--phase-c:var(--sea)}
 [data-kind="hold"],[data-kind="holdout"],[data-kind="retain"]{--phase-c:var(--sand)}
@@ -204,7 +204,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
   font-family:var(--mono);font-weight:200;
   font-size:clamp(2.2rem,12vmin,6rem);
   line-height:1;
-  /* letter-spacing is compensated by the JS optical-centring transform,
+  /* letter-spacing is compensated by the JS optical-centering transform,
      so no margin correction here (that would double-correct). */
   letter-spacing:-.02em;
   font-variant-numeric:tabular-nums;
@@ -564,10 +564,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
   const doneEl=$('done'), doneSub=$('done-sub'), doneMeta=$('done-meta');
   const toastEl=$('toast');
 
-  // ---------- optical centring ----------
-  // The layout box is centred, but glyph ink is not: monospace digits have
+  // ---------- optical centering ----------
+  // The layout box is centered, but glyph ink is not: monospace digits have
   // uneven side bearings ("1" is narrow, "4" is wide), so a string like 1:04
-  // sits a few px right of true centre. Measure the ink and nudge it back.
+  // sits a few px right of true center. Measure the ink and nudge it back.
   const inkCache = new Map();
   let measureCtx = null;
   function inkOffset(el, text){
@@ -982,7 +982,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
   }
   function dismiss(){ if(run.status!=='done') return; doneEl.hidden=true; reset(); }
 
-  // ---------- sound (synthesised, no assets) ----------
+  // ---------- sound (synthesized, no assets) ----------
   const Sound=(function(){
     let ctx=null, noise=null, drone=null;
     function on(){ return state.sound!=='off'; }
