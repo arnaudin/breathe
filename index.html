@@ -1,0 +1,1151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Breathe</title>
+<meta name="description" content="A quiet breathing pacer: coherence breathing, box breathing, and the Wim Hof method.">
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{
+  --ground:#e3eaec;
+  --ground-2:#d6dfe2;
+  --ink:#1a282e;
+  --ink-2:#5b6e75;
+  --line:#bcc9ce;
+  --sea:#4f8b8d;
+  --sky:#7ba4c6;
+  --sand:#c6a36e;
+  --phase-c:var(--sea);
+  --pad-y:clamp(10px,3vmin,28px);
+  --pad-x:16px;
+  --mono:"Azeret Mono", "SF Mono", Menlo, Consolas, monospace;
+  --sans:Karla, "Helvetica Neue", Arial, system-ui, sans-serif;
+  --num-shadow:
+    0 2px 3px color-mix(in oklab, #0b1418, transparent 88%),
+    0 10px 34px color-mix(in oklab, var(--phase-c), transparent 62%);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0e1619;
+    --ground-2:#162024;
+    --ink:#e2e9eb;
+    --ink-2:#89999f;
+    --line:#27353a;
+    --sea:#6fb3b3;
+    --sky:#8fb6d8;
+    --sand:#d6b07a;
+    --num-shadow:
+      0 2px 12px color-mix(in oklab, #000, transparent 72%),
+      0 0 44px color-mix(in oklab, var(--phase-c), transparent 58%);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0e1619;
+  --ground-2:#162024;
+  --ink:#e2e9eb;
+  --ink-2:#89999f;
+  --line:#27353a;
+  --sea:#6fb3b3;
+  --sky:#8fb6d8;
+  --sand:#d6b07a;
+  --num-shadow:
+    0 2px 12px color-mix(in oklab, #000, transparent 72%),
+    0 0 44px color-mix(in oklab, var(--phase-c), transparent 58%);
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:14px;
+  line-height:1.4;
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-offset:3px;border-radius:999px}
+
+/* phase colour */
+[data-kind="inhale"],[data-kind="recover"]{--phase-c:var(--sky)}
+[data-kind="exhale"]{--phase-c:var(--sea)}
+[data-kind="hold"],[data-kind="holdout"],[data-kind="retain"]{--phase-c:var(--sand)}
+[data-kind="settle"],[data-kind="rest"]{--phase-c:var(--line)}
+[data-kind="idle"]{--phase-c:color-mix(in oklab,var(--sea),var(--line) 55%)}
+
+/* ---------- frame ---------- */
+.app{
+  height:100%;
+  max-width:760px;
+  margin:0 auto;
+  position:relative;
+  padding-block:var(--pad-y);
+  padding-inline:var(--pad-x);
+  display:grid;
+  grid-template-rows:auto minmax(0,1fr) auto;
+  gap:clamp(6px,2vmin,18px);
+}
+.bottom{display:grid;gap:clamp(6px,2vmin,18px)}
+
+/* chrome = everything that is not the orb; hidden whenever focus mode is on,
+   in every state, and brought back for a few seconds by any pointer or key.
+   In focus mode it is taken out of flow so the orb gets the whole screen and
+   nothing resizes when the controls fade in and out. */
+.chrome{transition:opacity .45s ease, visibility .45s}
+.app.focus{grid-template-rows:minmax(0,1fr)}
+.app.focus .chrome{
+  position:absolute;left:var(--pad-x);right:var(--pad-x);z-index:4;
+  opacity:0;visibility:hidden;pointer-events:none;
+}
+.app.focus .top{top:var(--pad-y)}
+.app.focus .bottom{bottom:var(--pad-y)}
+.app.focus.revealed .chrome{opacity:1;visibility:visible;pointer-events:auto}
+
+/* While a session is in progress, revealing in focus mode offers only the
+   transport controls, plus the sound and exit-fullscreen icons, which are the
+   only way out without a keyboard. Everything else returns once you reset.
+   display:none rather than opacity so the buttons stay anchored to the edges. */
+.app.focus.session .count,
+.app.focus.session .modes,
+.app.focus.session .tray{display:none}
+
+/* ---------- header: practices + icons ---------- */
+.top{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:8px;
+  color:var(--ink-2);
+}
+/* explicit columns: hiding the practice tabs must not let the icons slide
+   into the middle column */
+.topleft{grid-column:1;min-width:0;overflow:hidden}
+.modes{grid-column:2}
+.topright{grid-column:3;display:flex;align-items:center;justify-content:flex-end;gap:4px}
+.count{
+  font-family:var(--mono);font-weight:300;font-size:.66rem;letter-spacing:.06em;
+  color:var(--ink-2);white-space:nowrap;
+}
+.modes{display:flex;justify-content:center;gap:clamp(10px,3.4vw,26px)}
+.mode{
+  padding:.45em .1em;
+  color:var(--ink-2);letter-spacing:.14em;text-transform:uppercase;font-size:.72rem;
+  border-bottom:1px solid transparent;
+  white-space:nowrap;
+  transition:color .2s,border-color .3s;
+}
+.mode:hover{color:var(--ink)}
+.mode[aria-pressed="true"]{color:var(--ink);border-bottom-color:var(--ink)}
+.icon{
+  width:34px;height:34px;border-radius:50%;flex:none;
+  display:grid;place-items:center;color:var(--ink-2);
+  transition:background .2s,color .2s;
+}
+.icon:hover{background:var(--ground-2);color:var(--ink)}
+.icon[aria-pressed="true"]{color:var(--ink)}
+.icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.icon .off,.icon .exit{display:none}
+.icon.sound[data-sound="off"] .off{display:block}
+.icon.sound[data-sound="off"] .wave1,
+.icon.sound[data-sound="off"] .wave2{display:none}
+.icon.sound[data-sound="bells"] .wave2{display:none}
+.app.focus .icon.fs .exit{display:block}
+.app.focus .icon.fs .enter{display:none}
+
+/* ---------- vessel: orb + ring + clock ---------- */
+.vessel{
+  position:relative;
+  display:grid;place-items:center;
+  min-height:0;
+  container-type:size;
+}
+.orb{
+  position:absolute;inset:0;margin:auto;
+  width:calc(min(100cqw,100cqh) * .82);aspect-ratio:1;border-radius:50%;
+  background-color:color-mix(in oklab,var(--phase-c),transparent 50%);
+  background-image:radial-gradient(circle at 38% 32%, rgba(255,255,255,.32), transparent 62%);
+  box-shadow:0 0 clamp(24px,7vmin,70px) color-mix(in oklab,var(--phase-c),transparent 55%);
+  transform:scale(var(--s,.64));
+  transition:background-color 1.4s ease,box-shadow 1.4s ease,transform 1.6s ease;
+  will-change:transform;
+}
+.app.running .orb{transition:background-color 1.4s ease,box-shadow 1.4s ease}
+.ring{
+  position:absolute;inset:0;margin:auto;
+  width:min(100cqw,100cqh);height:auto;
+  aspect-ratio:1;display:block;overflow:visible;
+}
+.ring .track{fill:none;stroke:var(--line);stroke-width:1.2}
+.ring .fill{
+  fill:none;stroke:var(--ink);stroke-width:2.2;stroke-linecap:round;opacity:.55;
+  transform:rotate(-90deg);transform-origin:50% 50%;
+  stroke-dasharray:1;stroke-dashoffset:1;
+}
+.clock{
+  position:absolute;inset:0;
+  display:grid;place-content:center;justify-items:center;
+  gap:.3em;text-align:center;
+}
+/* letter-spacing adds a trailing gap after the last character, which pulls
+   spaced text visually left; the negative margin cancels it. */
+.phase{
+  font-size:clamp(.72rem,2vmin,.9rem);
+  letter-spacing:.2em;margin-right:-.2em;
+  text-transform:uppercase;
+  color:var(--ink-2);min-height:1.4em;transition:color .6s;
+}
+.num{
+  font-family:var(--mono);font-weight:200;
+  font-size:clamp(2.2rem,12vmin,6rem);
+  line-height:1;
+  /* letter-spacing is compensated by the JS optical-centring transform,
+     so no margin correction here (that would double-correct). */
+  letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;
+  text-shadow:var(--num-shadow);
+  transition:color .4s, text-shadow .8s ease;
+}
+.sub{
+  font-family:var(--mono);font-weight:300;
+  font-size:clamp(.68rem,1.9vmin,.82rem);
+  letter-spacing:.06em;margin-right:-.06em;
+  color:var(--ink-2);min-height:1.4em;
+}
+.app.running .phase,.app.running .sub{color:color-mix(in oklab,var(--ink),transparent 22%)}
+.app.paused .num{color:var(--ink-2)}
+
+/* ---------- tray: prompt and settings share one cell ----------
+   The prompt only speaks during a session and the settings are only
+   actionable before one, so they swap in place. The cell is always as tall
+   as the taller of the two, so nothing above it ever moves. */
+.tray{display:grid;align-items:center;width:100%}
+.tray > *{grid-area:1/1}
+.prompt{
+  margin:0 auto;text-align:center;font-style:italic;color:var(--ink-2);
+  font-size:clamp(.85rem,2.3vmin,1.05rem);min-height:1.4em;max-width:40ch;
+  text-wrap:balance;
+  transition:opacity .9s ease, visibility .9s;
+}
+.prompt.fade{opacity:0}
+.app:not(.session) .prompt{opacity:0;visibility:hidden}
+
+/* ---------- controls ---------- */
+.controls{display:flex;justify-content:center;align-items:center;gap:12px}
+.primary{
+  min-width:9.5em;padding:.7em 1.6em;border-radius:999px;
+  background:var(--ink);color:var(--ground);
+  font-weight:500;letter-spacing:.06em;text-transform:uppercase;font-size:.78rem;
+  transition:transform .15s,opacity .2s;
+}
+.primary:hover{transform:translateY(-1px)}
+.primary:active{transform:translateY(0)}
+.ghost{
+  padding:.7em 1.1em;border-radius:999px;color:var(--ink-2);
+  font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;
+  transition:color .2s,background .2s;
+}
+.ghost:hover{color:var(--ink);background:var(--ground-2)}
+.ghost:disabled{opacity:.35;cursor:default;background:none;color:var(--ink-2)}
+
+/* ---------- settings ---------- */
+.settings{
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  transition:opacity .5s ease, visibility .5s;
+}
+.app.session .settings{opacity:0;visibility:hidden}
+.panel{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px 20px;width:100%}
+.panel[hidden]{display:none}
+.group{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center}
+.eyebrow{font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-2);margin-right:2px}
+.pill{
+  display:inline-flex;align-items:baseline;gap:.45em;
+  padding:.42em .85em;border-radius:999px;border:1px solid var(--line);color:var(--ink);
+  font-size:.78rem;white-space:nowrap;
+  transition:background .2s,border-color .2s,color .2s;
+}
+.pill:hover{border-color:var(--ink-2)}
+.pill[aria-pressed="true"]{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.fields{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:.76rem;color:var(--ink-2)}
+.fields[hidden]{display:none}
+.fields input{
+  width:3.4em;padding:.35em .3em;font:inherit;color:var(--ink);text-align:center;
+  background:var(--ground-2);border:1px solid var(--line);border-radius:8px;
+  -moz-appearance:textfield;
+}
+.fields input::-webkit-inner-spin-button,.fields input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.fields input:focus-visible{border-radius:8px;outline-offset:1px}
+.stepper{display:inline-flex;align-items:center;gap:2px}
+.step{
+  width:28px;height:28px;border-radius:50%;display:grid;place-items:center;
+  color:var(--ink-2);font-size:1rem;line-height:1;
+  transition:background .2s,color .2s;
+}
+.step:hover{background:var(--ground-2);color:var(--ink)}
+.val{font-family:var(--mono);font-weight:300;font-size:.8rem;min-width:5.2em;text-align:center}
+
+/* ---------- safety toast ----------
+   Pre-flight guidance for Wim Hof. Pinned lower-right, dismissible, and it
+   steps aside on its own once a session starts. */
+.toast{
+  position:fixed;right:16px;bottom:16px;z-index:20;
+  width:min(360px, calc(100vw - 32px));
+  display:flex;align-items:flex-start;gap:10px;
+  padding:13px 13px 13px 15px;
+  background:var(--ground-2);
+  border:1px solid var(--line);
+  border-left:2px solid var(--sand);
+  border-radius:14px;
+  box-shadow:0 12px 34px color-mix(in oklab, #000, transparent 76%);
+  color:var(--ink-2);
+  font-size:.76rem;line-height:1.55;
+}
+/* No entry animation or fade, deliberately. An animation or transition that is
+   mid-flight while the page is not painting keeps applying its start value, so
+   a throttled tab can strand the notice at zero opacity. A safety message must
+   not depend on a frame ever arriving, so it simply appears and disappears. */
+.toast[hidden]{display:none}
+.toast p{margin:0}
+.toast b{font-weight:500;color:var(--ink)}
+.toast-close{
+  flex:none;width:26px;height:26px;border-radius:50%;margin:-3px -3px 0 0;
+  display:grid;place-items:center;color:var(--ink-2);
+  transition:background .2s,color .2s;
+}
+.toast-close:hover{background:var(--ground);color:var(--ink)}
+.toast-close svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+/* in focus mode it follows the same reveal as the rest of the chrome */
+.app.focus ~ .toast{opacity:0;visibility:hidden;pointer-events:none}
+.app.focus.revealed ~ .toast{opacity:1;visibility:visible;pointer-events:auto}
+/* ---------- done overlay ---------- */
+.done{
+  position:fixed;inset:0;z-index:10;
+  display:grid;place-items:center;text-align:center;
+  background:color-mix(in oklab,var(--ground),var(--sea) 32%);color:var(--ink);
+  cursor:pointer;padding:24px;
+  animation:arrive 1.6s ease both;
+}
+.done[hidden]{display:none}
+@keyframes arrive{from{opacity:0}to{opacity:1}}
+.done-title{
+  font-family:var(--mono);font-weight:200;
+  font-size:clamp(2.4rem,14vmin,6.5rem);line-height:1;
+  letter-spacing:-.02em;margin-right:.02em;
+}
+.done-sub{margin-top:.8em;font-size:clamp(.85rem,2.4vmin,1.05rem);letter-spacing:.04em;color:var(--ink)}
+.done-meta{margin-top:.5em;font-family:var(--mono);font-weight:300;font-size:.74rem;letter-spacing:.06em;color:var(--ink-2)}
+.done-hint{margin-top:2.4em;font-size:.72rem;letter-spacing:.12em;margin-right:-.12em;text-transform:uppercase;color:var(--ink-2)}
+
+/* ---------- compact ---------- */
+@media (max-width:560px){
+  .count{display:none}
+  .mode{font-size:.68rem;letter-spacing:.1em}
+}
+@media (max-width:480px),(max-height:520px){
+  .app{gap:clamp(4px,1.4vmin,10px)}
+  .prompt{font-size:.82rem;max-width:32ch}
+  .pill{padding:.35em .7em;font-size:.72rem}
+  .panel{gap:4px 12px}
+}
+@media (max-height:420px){
+  .prompt{display:none}
+}
+/* too short to reserve room for a tray that is half empty */
+@media (max-height:400px){
+  .app.session .tray{display:none}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .orb{box-shadow:none}
+  .done{animation:none}
+  .primary:hover{transform:none}
+}
+</style>
+</head>
+<body>
+
+<main class="app" id="app" data-kind="idle">
+  <header class="top chrome">
+    <div class="topleft"><span class="count" id="count"></span></div>
+    <nav class="modes" id="modes" aria-label="Breathing practice">
+      <button class="mode" data-mode="coherence" aria-pressed="true">Coherence</button>
+      <button class="mode" data-mode="box" aria-pressed="false">Box</button>
+      <button class="mode" data-mode="wimhof" aria-pressed="false">Wim Hof</button>
+    </nav>
+    <div class="topright">
+      <button class="icon sound" id="sound" data-sound="bells" title="Sound" aria-label="Sound">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 10v4h3l5 4V6L7 10z"/>
+          <path class="wave1" d="M15.5 9a3.5 3.5 0 0 1 0 6"/>
+          <path class="wave2" d="M18 6.5a7 7 0 0 1 0 11"/>
+          <path class="off" d="M4 4l16 16"/>
+        </svg>
+      </button>
+      <button class="icon fs" id="fs" aria-pressed="false" title="Focus mode (F)" aria-label="Focus mode">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <g class="enter"><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4"/></g>
+          <g class="exit"><path d="M9 4v4H5M15 4v4h4M9 20v-4H5M15 20v-4h4"/></g>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <section class="vessel" id="vessel" aria-label="Breathing pacer">
+    <div class="orb" id="orb" aria-hidden="true"></div>
+    <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
+      <circle class="track" cx="100" cy="100" r="94"/>
+      <circle class="fill" id="ringfill" cx="100" cy="100" r="94" pathLength="1"/>
+    </svg>
+    <div class="clock">
+      <div class="phase" id="phase">Coherence</div>
+      <div class="num" id="num" role="timer" aria-live="off">5:00</div>
+      <div class="sub" id="sub"></div>
+    </div>
+  </section>
+
+  <div class="bottom chrome">
+  <div class="controls">
+    <button class="ghost" id="reset" disabled>Reset</button>
+    <button class="primary" id="start">Begin</button>
+  </div>
+
+  <div class="tray">
+  <p class="prompt" id="prompt" aria-live="polite">Choose a practice, then begin.</p>
+
+  <section class="settings" id="settings" aria-label="Settings">
+
+    <div class="panel" data-panel="coherence">
+      <div class="group"><span class="eyebrow">Rhythm</span><span id="coh-rhythm"></span>
+        <span class="fields" id="coh-fields" hidden>
+          <input type="number" id="coh-in" min="1" max="20" step="0.5" inputmode="decimal" aria-label="Inhale seconds"> in
+          <input type="number" id="coh-out" min="1" max="20" step="0.5" inputmode="decimal" aria-label="Exhale seconds"> out
+        </span>
+      </div>
+      <div class="group"><span class="eyebrow">Length</span>
+        <span class="stepper"><button class="step" data-len="coh" data-dir="-1" aria-label="Shorter">&minus;</button><span class="val" id="coh-len"></span><button class="step" data-len="coh" data-dir="1" aria-label="Longer">+</button></span>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="box" hidden>
+      <div class="group"><span class="eyebrow">Pattern</span><span id="box-pattern"></span>
+        <span class="fields" id="box-fields" hidden>
+          <input type="number" id="box-in" min="1" max="20" step="0.5" inputmode="decimal" aria-label="Inhale seconds">
+          <input type="number" id="box-h1" min="0" max="30" step="0.5" inputmode="decimal" aria-label="Hold seconds">
+          <input type="number" id="box-out" min="1" max="20" step="0.5" inputmode="decimal" aria-label="Exhale seconds">
+          <input type="number" id="box-h2" min="0" max="30" step="0.5" inputmode="decimal" aria-label="Hold empty seconds">
+        </span>
+      </div>
+      <div class="group"><span class="eyebrow">Length</span>
+        <span class="stepper"><button class="step" data-len="box" data-dir="-1" aria-label="Shorter">&minus;</button><span class="val" id="box-len"></span><button class="step" data-len="box" data-dir="1" aria-label="Longer">+</button></span>
+      </div>
+    </div>
+
+    <div class="panel" data-panel="wimhof" hidden>
+      <div class="group"><span class="eyebrow">Breaths</span><span id="wh-breaths"></span></div>
+      <div class="group"><span class="eyebrow">Rounds</span><span id="wh-rounds"></span></div>
+      <div class="group"><span class="eyebrow">Pace</span><span id="wh-pace"></span></div>
+    </div>
+
+    <div class="panel">
+      <div class="group"><span class="eyebrow">Sound</span><span id="sound-pills"></span></div>
+    </div>
+  </section>
+  </div>
+  </div>
+</main>
+
+<aside class="toast" id="toast" role="status" aria-live="polite" hidden>
+  <p><b>Sit or lie down somewhere safe.</b> This breathing causes light-headedness by design. Never practise in or near water, while driving, or standing up. If you are pregnant or have epilepsy, a heart condition, or high blood pressure, check with a doctor first. Stop if you feel unwell.</p>
+  <button class="toast-close" id="toast-close" aria-label="Dismiss safety notice">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+</aside>
+
+<div class="done" id="done" hidden role="alert">
+  <div>
+    <div class="done-title">Complete</div>
+    <div class="done-sub" id="done-sub"></div>
+    <div class="done-meta" id="done-meta"></div>
+    <div class="done-hint">Tap anywhere to continue</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  const clamp = (n,a,b) => Math.min(b, Math.max(a, n));
+  const ease  = q => 0.5 - 0.5*Math.cos(Math.PI*clamp(q,0,1));
+  const STORE = 'breathe.v1';
+  const S_MIN = 0.6, S_MAX = 1.0, S_IDLE = 0.64, S_RETAIN = 0.7;
+
+  const COH_RHYTHMS  = [[4,4],[5,5],[5.5,5.5],[6,6],[4,6]];
+  const BOX_PATTERNS = [[3,3,3,3],[4,4,4,4],[5,5,5,5],[6,6,6,6]];
+  const LENGTHS      = [1,2,3,4,5,6,8,10,12,15,20,25,30,45,60];
+  const WH_BREATHS   = [20,30,35,40];
+  const WH_ROUNDS    = [1,2,3,4];
+  const WH_PACE      = {slow:[2.2,1.8], steady:[1.7,1.3], brisk:[1.3,1.0]};
+  const WH_PACE_LIST = [['slow','Slow'],['steady','Steady'],['brisk','Brisk']];
+  const SOUNDS       = [['off','Off'],['bells','Bells'],['tone','Bells + tone']];
+
+  const CALM = [
+    'Breathe through the nose, low and slow.',
+    'Soften the belly. Let it rise and fall on its own.',
+    'Let the breath be quiet enough that no one could hear it.',
+    'Unclench the jaw. Let the tongue rest.',
+    'The out-breath is where the body lets go.',
+    'Nothing to reach for. Just this breath, then the next.',
+    'Let the shoulders be heavy. Let the hands be still.',
+    'If the mind wanders, come back to the count. Kindly.',
+  ];
+  const WH_TEXT = {
+    settle:      'Sit or lie down somewhere safe. Never near water.',
+    breathe:     'Full breath in, belly then chest. Let it fall out with a soft "hah". No force.',
+    // carries the one piece of the safety note that is mid-session advice,
+    // since the note itself lives in the settings panel and is now pre-flight only
+    breatheLate: 'Tingling and light-headedness are expected. Stay seated, and stop if you feel unwell.',
+    retain:      'Hold on the out-breath, lungs relaxed. Breathe in whenever you need to.',
+    recover:     'One deep breath in. Hold it gently.',
+    rest:        'Breathe normally for a moment. The next round begins shortly.',
+  };
+
+  // ---------- state (persisted) ----------
+  // sound is the single source of truth: 'off' | 'bells' | 'tone'.
+  // The header icon is a shortcut that flips between 'off' and lastSound.
+  const state = {
+    mode:'coherence',
+    coh:{inhale:5.5, exhale:5.5, custom:false, minutes:5},
+    box:{inhale:4, hold1:4, exhale:4, hold2:4, custom:false, minutes:5},
+    wh:{breaths:30, rounds:3, pace:'steady'},
+    sound:'bells', lastSound:'bells',
+    focus:false,
+    log:{sessions:0, seconds:0},
+  };
+  function load(){
+    try{
+      const raw = localStorage.getItem(STORE);
+      if(!raw) return;
+      const s = JSON.parse(raw);
+      for(const k of Object.keys(state)){
+        if(s[k]==null) continue;
+        if(state[k] && typeof state[k]==='object') Object.assign(state[k], s[k]); else state[k]=s[k];
+      }
+    }catch(e){}
+    if(!['coherence','box','wimhof'].includes(state.mode)) state.mode='coherence';
+    state.coh.inhale = clamp(+state.coh.inhale||5.5, 1, 20);
+    state.coh.exhale = clamp(+state.coh.exhale||5.5, 1, 20);
+    state.coh.minutes = clamp(+state.coh.minutes||5, 1, 60);
+    state.box.inhale = clamp(+state.box.inhale||4, 1, 20);
+    state.box.hold1  = clamp(+state.box.hold1||0, 0, 30);
+    state.box.exhale = clamp(+state.box.exhale||4, 1, 20);
+    state.box.hold2  = clamp(+state.box.hold2||0, 0, 30);
+    state.box.minutes = clamp(+state.box.minutes||5, 1, 60);
+    if(!WH_BREATHS.includes(state.wh.breaths)) state.wh.breaths=30;
+    if(!WH_ROUNDS.includes(state.wh.rounds)) state.wh.rounds=3;
+    if(!WH_PACE[state.wh.pace]) state.wh.pace='steady';
+    if(!SOUNDS.some(s=>s[0]===state.sound)) state.sound='bells';
+    if(state.lastSound==='off' || !SOUNDS.some(s=>s[0]===state.lastSound)) state.lastSound='bells';
+    state.focus = !!state.focus;
+    state.log.sessions = Math.max(0, +state.log.sessions||0);
+    state.log.seconds  = Math.max(0, +state.log.seconds||0);
+  }
+  function save(){ try{ localStorage.setItem(STORE, JSON.stringify(state)); }catch(e){} }
+
+  // ---------- elements ----------
+  const app=$('app'), orb=$('orb'), ringFill=$('ringfill');
+  const phaseEl=$('phase'), numEl=$('num'), subEl=$('sub'), promptEl=$('prompt');
+  const startBtn=$('start'), resetBtn=$('reset'), soundBtn=$('sound'), fsBtn=$('fs'), countEl=$('count');
+  const doneEl=$('done'), doneSub=$('done-sub'), doneMeta=$('done-meta');
+  const toastEl=$('toast');
+
+  // ---------- optical centring ----------
+  // The layout box is centred, but glyph ink is not: monospace digits have
+  // uneven side bearings ("1" is narrow, "4" is wide), so a string like 1:04
+  // sits a few px right of true centre. Measure the ink and nudge it back.
+  const inkCache = new Map();
+  let measureCtx = null;
+  function inkOffset(el, text){
+    if(!text) return 0;
+    const cs = getComputedStyle(el);
+    const font = cs.fontStyle+' '+cs.fontWeight+' '+cs.fontSize+' '+cs.fontFamily;
+    const ls = parseFloat(cs.letterSpacing) || 0;
+    const key = font+'|'+ls+'|'+text;
+    if(inkCache.has(key)) return inkCache.get(key);
+    let off = 0;
+    try{
+      if(!measureCtx) measureCtx = document.createElement('canvas').getContext('2d');
+      measureCtx.font = font;
+      const m = measureCtx.measureText(text);
+      if(typeof m.actualBoundingBoxLeft === 'number' && typeof m.actualBoundingBoxRight === 'number'){
+        // ink spans [-L, R + (n-1)*ls]; the laid-out box spans [0, width + n*ls]
+        off = (-m.actualBoundingBoxLeft + m.actualBoundingBoxRight - m.width - ls) / 2;
+      }
+    }catch(e){ off = 0; }
+    const cap = parseFloat(cs.fontSize) * 0.08;          // never nudge more than 8% of the size
+    off = isFinite(off) ? clamp(off, -cap, cap) : 0;
+    inkCache.set(key, off);
+    return off;
+  }
+  function setNum(text){
+    if(numEl.textContent !== text) numEl.textContent = text;
+    const o = inkOffset(numEl, text);
+    const t = Math.abs(o) < 0.2 ? '' : 'translateX('+(-o).toFixed(2)+'px)';
+    if(numEl.style.transform !== t) numEl.style.transform = t;
+  }
+  if(document.fonts && document.fonts.ready){
+    document.fonts.ready.then(()=>{ inkCache.clear(); setNum(numEl.textContent); });
+  }
+
+  // ---------- formatting ----------
+  function fmt(sec){
+    sec = Math.max(0, Math.round(sec));
+    const m=Math.floor(sec/60), s=sec%60;
+    return m+':'+String(s).padStart(2,'0');
+  }
+  function fmtLong(sec){
+    const m=Math.round(sec/60);
+    if(m<60) return m+' min';
+    const h=Math.floor(m/60), r=m%60;
+    return h+' h'+(r?' '+r+' min':'');
+  }
+  function num(n){ return Number.isInteger(n) ? String(n) : String(n).replace(/\.0$/,''); }
+  function arrEq(a,b){ return a.length===b.length && a.every((v,i)=>v===b[i]); }
+
+  // ---------- plan ----------
+  function buildPlan(){
+    const ph=[];
+    if(state.mode==='coherence'){
+      const {inhale,exhale,minutes}=state.coh;
+      const cyc=Math.max(1, Math.ceil(minutes*60/(inhale+exhale)));
+      ph.push({kind:'settle', label:'Settle in', dur:4});
+      for(let i=1;i<=cyc;i++){
+        ph.push({kind:'inhale', label:'Breathe in',  dur:inhale, cycle:i, of:cyc});
+        ph.push({kind:'exhale', label:'Breathe out', dur:exhale, cycle:i, of:cyc});
+      }
+      return {phases:ph, cycles:cyc, practice:cyc*(inhale+exhale)};
+    }
+    if(state.mode==='box'){
+      const {inhale,hold1,exhale,hold2,minutes}=state.box;
+      const len=inhale+hold1+exhale+hold2;
+      const cyc=Math.max(1, Math.ceil(minutes*60/len));
+      ph.push({kind:'settle', label:'Settle in', dur:4});
+      for(let i=1;i<=cyc;i++){
+        ph.push({kind:'inhale', label:'Breathe in', dur:inhale, cycle:i, of:cyc});
+        if(hold1>0) ph.push({kind:'hold', label:'Hold', dur:hold1, cycle:i, of:cyc});
+        ph.push({kind:'exhale', label:'Breathe out', dur:exhale, cycle:i, of:cyc});
+        if(hold2>0) ph.push({kind:'holdout', label:'Hold', dur:hold2, cycle:i, of:cyc});
+      }
+      return {phases:ph, cycles:cyc, practice:cyc*len};
+    }
+    const {breaths,rounds,pace}=state.wh;
+    const [pi,po]=WH_PACE[pace];
+    ph.push({kind:'settle', label:'Settle in', dur:6, round:1});
+    for(let r=1;r<=rounds;r++){
+      if(r>1) ph.push({kind:'rest', label:'Round '+r, dur:6, round:r});
+      for(let b=1;b<=breaths;b++){
+        ph.push({kind:'inhale', label:'In',  dur:pi, round:r, breath:b, of:breaths});
+        ph.push({kind:'exhale', label:'Out', dur:po, round:r, breath:b, of:breaths});
+      }
+      ph.push({kind:'retain',  label:'Hold', open:true, round:r});
+      ph.push({kind:'recover', label:'Breathe in, hold', dur:15, round:r});
+    }
+    return {phases:ph, rounds, practice:null};
+  }
+  function summary(){
+    if(state.mode==='coherence'){
+      const p=buildPlan();
+      return {num:fmt(p.practice), sub:p.cycles+' breaths · '+num(state.coh.inhale)+' in · '+num(state.coh.exhale)+' out'};
+    }
+    if(state.mode==='box'){
+      const p=buildPlan(), b=state.box;
+      return {num:fmt(p.practice), sub:p.cycles+' cycles · '+[b.inhale,b.hold1,b.exhale,b.hold2].map(num).join(' · ')};
+    }
+    const [pi,po]=WH_PACE[state.wh.pace];
+    const perRound=state.wh.breaths*(pi+po);
+    return {num:String(state.wh.rounds), sub:(state.wh.rounds===1?'round':'rounds')+' · '+state.wh.breaths+' breaths · ~'+Math.round(perRound/60*2)/2+' min each'};
+  }
+
+  // ---------- runtime ----------
+  let run = {status:'idle'};
+  let rafId=0, intId=0;
+  const cur = () => run.plan.phases[run.i];
+
+  function begin(){
+    Sound.unlock();
+    if(run.status==='paused'){
+      run.phaseStart = performance.now() - run.pausedElapsed*1000;
+      run.status='running';
+      startLoop(); render(); keepAwake(true);
+      setPrompt(promptFor(cur()), false);
+      return;
+    }
+    hideToast();
+    run = {status:'running', plan:buildPlan(), i:0, phaseStart:performance.now(), retentions:[], pausedElapsed:0, lastCalm:0, calmIdx:Math.floor(Math.random()*CALM.length)};
+    enter(cur());
+    startLoop(); render(); keepAwake(true);
+  }
+  function pause(){
+    if(run.status!=='running') return;
+    run.pausedElapsed = (performance.now()-run.phaseStart)/1000;
+    run.status='paused';
+    stopLoop(); Sound.rest(); keepAwake(false); render();
+    setPrompt('Paused. Take your time.', true);
+  }
+  function reset(){
+    stopLoop(); Sound.rest(); keepAwake(false);
+    run={status:'idle'};
+    app.dataset.kind='idle';
+    render();
+    setPrompt('Choose a practice, then begin.', true);
+  }
+  function finish(){
+    stopLoop(); keepAwake(false);
+    run.status='done';
+    let secs;
+    if(state.mode==='wimhof'){
+      secs = run.plan.phases.reduce((a,p)=>a+(p.dur||0),0) + run.retentions.reduce((a,b)=>a+b,0);
+    }else{
+      secs = run.plan.practice;
+    }
+    state.log.sessions++; state.log.seconds += Math.round(secs); save();
+    Sound.finish();
+    app.dataset.kind='idle';
+    render();
+    showDone(secs);
+  }
+  function endRetention(){
+    if(run.status!=='running' || cur().kind!=='retain') return;
+    const el=(performance.now()-run.phaseStart)/1000;
+    run.retentions.push(el);
+    run.phaseStart = performance.now();
+    run.i++;
+    enter(cur());
+    render();
+  }
+
+  function startLoop(){
+    stopLoop();
+    const f=()=>{ if(run.status!=='running') return; tick(); rafId=requestAnimationFrame(f); };
+    rafId=requestAnimationFrame(f);
+    intId=setInterval(tick, 250);   // keeps cues firing when the tab is in the background
+  }
+  function stopLoop(){ cancelAnimationFrame(rafId); rafId=0; clearInterval(intId); intId=0; }
+
+  function tick(){
+    if(run.status!=='running') return;
+    const now=performance.now();
+    let p=cur(), el=(now-run.phaseStart)/1000, moved=false;
+    while(!p.open && el>=p.dur){
+      if(run.i+1 >= run.plan.phases.length){ finish(); return; }
+      run.phaseStart += p.dur*1000;   // carry the exact boundary, no drift
+      run.i++; p=cur(); el=(now-run.phaseStart)/1000; moved=true;
+      if(p.open) break;
+    }
+    if(moved) enter(p);
+    paint(p, el);
+  }
+
+  function enter(p){
+    app.dataset.kind = p.kind;
+    phaseEl.textContent = p.label;
+    Sound.cue(p, state.mode);
+    setPrompt(promptFor(p), false);
+    if(p.kind==='retain' || (state.mode==='wimhof' && p.kind==='recover')) render();
+    else if(run.plan.phases[run.i-1] && run.plan.phases[run.i-1].kind==='retain') render();
+  }
+
+  function promptFor(p){
+    if(p.kind==='settle') return state.mode==='wimhof' ? WH_TEXT.settle : 'Sit comfortably. Let the shoulders drop.';
+    if(state.mode==='wimhof'){
+      if(p.kind==='inhale'||p.kind==='exhale') return p.breath>=20 ? WH_TEXT.breatheLate : WH_TEXT.breathe;
+      return WH_TEXT[p.kind] || '';
+    }
+    const now=performance.now();
+    if(now-run.lastCalm > 24000){ run.lastCalm=now; run.calmIdx=(run.calmIdx+1)%CALM.length; }
+    return CALM[run.calmIdx];
+  }
+
+  // ---------- paint ----------
+  let lastTitle='';
+  function paint(p, el){
+    const q = p.open ? 0 : clamp(el/p.dur, 0, 1);
+    let s=S_MIN;
+    switch(p.kind){
+      case 'inhale':  s = S_MIN + (S_MAX-S_MIN)*ease(q); break;
+      case 'exhale':  s = S_MAX - (S_MAX-S_MIN)*ease(q); break;
+      case 'hold': case 'recover': s = S_MAX; break;
+      case 'retain':  s = S_RETAIN + 0.012*Math.sin(el*0.9); break;
+      default:        s = S_MIN;
+    }
+    orb.style.setProperty('--s', s.toFixed(4));
+
+    let n, sub='', ring=0;
+    if(state.mode==='wimhof'){
+      if(p.kind==='inhale'||p.kind==='exhale'){
+        n=String(p.breath); sub='of '+p.of+' · round '+p.round+' of '+run.plan.rounds;
+        ring=(p.breath-1+(p.kind==='inhale'?q*0.5:0.5+q*0.5))/p.of;
+      }
+      else if(p.kind==='retain'){ n=fmt(el); sub='round '+p.round+' of '+run.plan.rounds; ring=(el%60)/60; }
+      else if(p.kind==='recover'){ n=String(Math.ceil(p.dur-el)); sub='round '+p.round+' of '+run.plan.rounds; ring=1-q; }
+      else { n=String(Math.ceil(p.dur-el)); sub = p.kind==='rest' ? 'get ready' : ''; ring=0; }
+    }else{
+      n=String(Math.ceil(p.dur-el));
+      if(p.cycle) sub='breath '+p.cycle+' of '+p.of;
+      const done = run.plan.phases.slice(1, run.i).reduce((a,x)=>a+x.dur,0) + (p.kind==='settle'?0:Math.min(el,p.dur));
+      ring = clamp(done/run.plan.practice, 0, 1);
+    }
+    setNum(n);
+    if(subEl.textContent!==sub) subEl.textContent=sub;
+    ringFill.style.strokeDashoffset=String(1-ring);
+    const t = p.label+' · '+n;
+    if(t!==lastTitle){ document.title=t; lastTitle=t; }
+  }
+
+  function render(){
+    const running=run.status==='running', paused=run.status==='paused';
+    app.classList.toggle('running', running);
+    app.classList.toggle('paused', paused);
+    app.classList.toggle('session', running || paused);
+    app.classList.toggle('focus', state.focus);
+    document.querySelectorAll('.mode').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.mode===state.mode)));
+    document.querySelectorAll('.panel[data-panel]').forEach(p=>p.hidden = p.dataset.panel!==state.mode);
+    renderSettings();
+    soundBtn.dataset.sound = state.sound;
+    soundBtn.title = state.sound==='off' ? 'Sound off' : (state.sound==='tone' ? 'Bells and tone' : 'Bells');
+    fsBtn.setAttribute('aria-pressed', String(state.focus));
+    countEl.textContent = state.log.sessions ? state.log.sessions+(state.log.sessions===1?' session':' sessions')+' · '+fmtLong(state.log.seconds) : '';
+
+    if(running){
+      const p=cur();
+      startBtn.textContent = p.kind==='retain' ? 'Breathe in' : 'Pause';
+      resetBtn.disabled=false;
+      phaseEl.textContent=p.label;
+    }else if(paused){
+      startBtn.textContent='Resume'; resetBtn.disabled=false;
+    }else{
+      const sm=summary();
+      startBtn.textContent='Begin'; resetBtn.disabled=true;
+      phaseEl.textContent = {coherence:'Coherence', box:'Box breathing', wimhof:'Wim Hof'}[state.mode];
+      setNum(sm.num); subEl.textContent=sm.sub;
+      orb.style.setProperty('--s', String(S_IDLE));
+      ringFill.style.strokeDashoffset='1';
+      app.dataset.kind='idle';
+      document.title='Breathe'; lastTitle='Breathe';
+    }
+  }
+
+  // ---------- settings UI ----------
+  function pill(html, on){
+    const b=document.createElement('button'); b.type='button'; b.className='pill';
+    b.setAttribute('aria-pressed','false'); b.innerHTML=html; b.addEventListener('click', on); return b;
+  }
+  function changed(){ if(run.status==='running'||run.status==='paused') reset(); save(); render(); }
+  function stepLen(cur, dir){
+    let i=LENGTHS.findIndex(v=>v>=cur); if(i<0) i=LENGTHS.length-1;
+    if(dir>0){ if(LENGTHS[i]===cur) i++; } else { i--; }
+    return LENGTHS[clamp(i,0,LENGTHS.length-1)];
+  }
+  const ui={};
+  function buildSettings(){
+    ui.cohPills = COH_RHYTHMS.map(([a,b])=>{
+      const p=pill(num(a)+' · '+num(b), ()=>{ state.coh.inhale=a; state.coh.exhale=b; state.coh.custom=false; changed(); });
+      $('coh-rhythm').appendChild(p); return p;
+    });
+    ui.cohCustom = pill('Custom', ()=>{ state.coh.custom=true; changed(); });
+    $('coh-rhythm').appendChild(ui.cohCustom);
+    const cohIn=$('coh-in'), cohOut=$('coh-out');
+    const onCoh=()=>{ state.coh.inhale=clamp(parseFloat(cohIn.value)||1,1,20); state.coh.exhale=clamp(parseFloat(cohOut.value)||1,1,20); changed(); };
+    cohIn.addEventListener('change', onCoh); cohOut.addEventListener('change', onCoh);
+
+    ui.boxPills = BOX_PATTERNS.map(arr=>{
+      const p=pill(arr.map(num).join('·'), ()=>{ [state.box.inhale,state.box.hold1,state.box.exhale,state.box.hold2]=arr; state.box.custom=false; changed(); });
+      $('box-pattern').appendChild(p); return p;
+    });
+    ui.boxCustom = pill('Custom', ()=>{ state.box.custom=true; changed(); });
+    $('box-pattern').appendChild(ui.boxCustom);
+    const bi=$('box-in'), b1=$('box-h1'), bo=$('box-out'), b2=$('box-h2');
+    const onBox=()=>{
+      state.box.inhale=clamp(parseFloat(bi.value)||1,1,20); state.box.hold1=clamp(parseFloat(b1.value)||0,0,30);
+      state.box.exhale=clamp(parseFloat(bo.value)||1,1,20); state.box.hold2=clamp(parseFloat(b2.value)||0,0,30);
+      changed();
+    };
+    [bi,b1,bo,b2].forEach(el=>el.addEventListener('change', onBox));
+
+    document.querySelectorAll('.step').forEach(b=>b.addEventListener('click', ()=>{
+      const k=b.dataset.len; state[k].minutes = stepLen(state[k].minutes, +b.dataset.dir); changed();
+    }));
+
+    ui.whBreaths = WH_BREATHS.map(n=>{ const p=pill(String(n), ()=>{ state.wh.breaths=n; changed(); }); $('wh-breaths').appendChild(p); return p; });
+    ui.whRounds  = WH_ROUNDS.map(n=>{ const p=pill(String(n), ()=>{ state.wh.rounds=n; changed(); }); $('wh-rounds').appendChild(p); return p; });
+    ui.whPace    = WH_PACE_LIST.map(([k,l])=>{ const p=pill(l, ()=>{ state.wh.pace=k; changed(); }); $('wh-pace').appendChild(p); return p; });
+
+    ui.sound = SOUNDS.map(([k,l])=>{ const p=pill(l, ()=>setSound(k)); $('sound-pills').appendChild(p); return p; });
+
+    document.querySelectorAll('.mode').forEach(b=>b.addEventListener('click', ()=>{
+    if(state.mode===b.dataset.mode) return;
+    state.mode=b.dataset.mode; changed();
+    state.mode==='wimhof' ? showToast() : hideToast();
+  }));
+  }
+  function renderSettings(){
+    const c=state.coh, b=state.box;
+    const cohMatch = c.custom ? -1 : COH_RHYTHMS.findIndex(r=>arrEq(r,[c.inhale,c.exhale]));
+    ui.cohPills.forEach((p,i)=>p.setAttribute('aria-pressed', String(i===cohMatch)));
+    ui.cohCustom.setAttribute('aria-pressed', String(cohMatch<0));
+    $('coh-fields').hidden = cohMatch>=0;
+    $('coh-in').value=num(c.inhale); $('coh-out').value=num(c.exhale);
+    $('coh-len').textContent = c.minutes+' min';
+
+    const boxArr=[b.inhale,b.hold1,b.exhale,b.hold2];
+    const boxMatch = b.custom ? -1 : BOX_PATTERNS.findIndex(r=>arrEq(r,boxArr));
+    ui.boxPills.forEach((p,i)=>p.setAttribute('aria-pressed', String(i===boxMatch)));
+    ui.boxCustom.setAttribute('aria-pressed', String(boxMatch<0));
+    $('box-fields').hidden = boxMatch>=0;
+    $('box-in').value=num(b.inhale); $('box-h1').value=num(b.hold1); $('box-out').value=num(b.exhale); $('box-h2').value=num(b.hold2);
+    $('box-len').textContent = b.minutes+' min';
+
+    ui.whBreaths.forEach((p,i)=>p.setAttribute('aria-pressed', String(WH_BREATHS[i]===state.wh.breaths)));
+    ui.whRounds.forEach((p,i)=>p.setAttribute('aria-pressed', String(WH_ROUNDS[i]===state.wh.rounds)));
+    ui.whPace.forEach((p,i)=>p.setAttribute('aria-pressed', String(WH_PACE_LIST[i][0]===state.wh.pace)));
+    ui.sound.forEach((p,i)=>p.setAttribute('aria-pressed', String(SOUNDS[i][0]===state.sound)));
+  }
+
+  // ---------- sound choice ----------
+  function setSound(k){
+    state.sound=k;
+    if(k!=='off') { state.lastSound=k; Sound.unlock(); } else Sound.rest();
+    save(); render();
+  }
+  function toggleSound(){ setSound(state.sound==='off' ? state.lastSound : 'off'); }
+
+  // ---------- safety toast ----------
+  // Shown when Wim Hof is chosen, not on every visit to the idle screen, so it
+  // informs without nagging. Deliberately not persisted: a warning about
+  // fainting is worth re-reading on a fresh visit.
+  function showToast(){ toastEl.hidden=false; }
+  function hideToast(){ toastEl.hidden=true; }
+
+  // ---------- focus mode ----------
+  let revealT=0, fsGranted=false;
+  function reveal(){
+    app.classList.add('revealed');
+    clearTimeout(revealT);
+    revealT=setTimeout(()=>app.classList.remove('revealed'), 1600);
+  }
+  async function setFocus(on){
+    state.focus=on; save(); render();
+    if(!on) clearTimeout(revealT);
+    try{
+      if(on && !document.fullscreenElement && document.documentElement.requestFullscreen){
+        await document.documentElement.requestFullscreen();
+        fsGranted=true;
+      }else if(!on && document.fullscreenElement && document.exitFullscreen){
+        await document.exitFullscreen();
+        fsGranted=false;
+      }
+    }catch(e){ fsGranted=false; }   // iOS Safari and friends: CSS focus mode still applies
+  }
+  document.addEventListener('fullscreenchange', ()=>{
+    if(!document.fullscreenElement && fsGranted && state.focus){
+      fsGranted=false; state.focus=false; save(); render();
+    }
+  });
+
+  // ---------- prompt ----------
+  let promptTimer=0;
+  function setPrompt(text, immediate){
+    if(promptEl.textContent===text && !promptEl.classList.contains('fade')) return;
+    clearTimeout(promptTimer);
+    if(immediate){ promptEl.classList.remove('fade'); promptEl.textContent=text; return; }
+    promptEl.classList.add('fade');
+    promptTimer=setTimeout(()=>{ promptEl.textContent=text; promptEl.classList.remove('fade'); }, 700);
+  }
+
+  // ---------- done overlay ----------
+  function showDone(secs){
+    const name={coherence:'coherence breathing', box:'box breathing', wimhof:'Wim Hof breathing'}[state.mode];
+    if(state.mode==='wimhof'){
+      const r=run.retentions;
+      doneSub.textContent = run.plan.rounds+(run.plan.rounds===1?' round':' rounds')+' of '+name+'.';
+      doneMeta.textContent = 'retention '+r.map(fmt).join(' · ')+'   ·   session '+state.log.sessions;
+    }else{
+      doneSub.textContent = fmt(secs)+' of '+name+'. Notice how you feel.';
+      doneMeta.textContent = 'session '+state.log.sessions+'   ·   '+fmtLong(state.log.seconds)+' in total';
+    }
+    doneEl.hidden=false;
+  }
+  function dismiss(){ if(run.status!=='done') return; doneEl.hidden=true; reset(); }
+
+  // ---------- sound (synthesised, no assets) ----------
+  const Sound=(function(){
+    let ctx=null, noise=null, drone=null;
+    function on(){ return state.sound!=='off'; }
+    function unlock(){
+      try{
+        if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)();
+        if(ctx.state==='suspended') ctx.resume();
+      }catch(e){}
+      return !!ctx;
+    }
+    function bell(freq, vol, t, decay){
+      decay = decay||2.8;
+      const partials=[[1,1],[2.01,.4],[2.94,.18],[4.16,.08]];
+      for(const [ratio,g] of partials){
+        const o=ctx.createOscillator(), a=ctx.createGain();
+        o.type='sine'; o.frequency.value=freq*ratio;
+        a.gain.setValueAtTime(0.0001,t);
+        a.gain.exponentialRampToValueAtTime(vol*g*0.3, t+0.012);
+        a.gain.exponentialRampToValueAtTime(0.0001, t+decay/ratio);
+        o.connect(a).connect(ctx.destination);
+        o.start(t); o.stop(t+decay+0.2);
+      }
+    }
+    function noiseBuf(){
+      if(noise) return noise;
+      const len=ctx.sampleRate*2, buf=ctx.createBuffer(1,len,ctx.sampleRate), d=buf.getChannelData(0);
+      let b0=0,b1=0,b2=0;
+      for(let i=0;i<len;i++){
+        const w=Math.random()*2-1;
+        b0=0.997*b0+0.029*w; b1=0.985*b1+0.032*w; b2=0.950*b2+0.048*w;
+        d[i]=(b0+b1+b2+w*0.05)*0.6;
+      }
+      noise=buf; return buf;
+    }
+    function breath(dir, dur){
+      const t=ctx.currentTime+0.01;
+      const src=ctx.createBufferSource(); src.buffer=noiseBuf(); src.loop=true;
+      const f=ctx.createBiquadFilter(); f.type='bandpass'; f.Q.value=0.7;
+      const g=ctx.createGain();
+      if(dir==='in'){
+        f.frequency.setValueAtTime(400,t); f.frequency.exponentialRampToValueAtTime(1600,t+dur);
+        g.gain.setValueAtTime(0.0001,t);
+        g.gain.exponentialRampToValueAtTime(0.22,t+dur*0.75);
+        g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      }else{
+        f.frequency.setValueAtTime(1200,t); f.frequency.exponentialRampToValueAtTime(250,t+dur);
+        g.gain.setValueAtTime(0.28,t);
+        g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+        const o=ctx.createOscillator(), og=ctx.createGain();
+        o.type='sine'; o.frequency.setValueAtTime(140,t); o.frequency.exponentialRampToValueAtTime(70,t+0.25);
+        og.gain.setValueAtTime(0.18,t); og.gain.exponentialRampToValueAtTime(0.0001,t+0.3);
+        o.connect(og).connect(ctx.destination); o.start(t); o.stop(t+0.35);
+      }
+      src.connect(f).connect(g).connect(ctx.destination);
+      src.start(t); src.stop(t+dur+0.1);
+    }
+    function ensureDrone(){
+      if(drone) return drone;
+      const o1=ctx.createOscillator(), o2=ctx.createOscillator(), f=ctx.createBiquadFilter(), g=ctx.createGain();
+      o1.type='sine'; o2.type='triangle';
+      o1.frequency.value=146.83; o2.frequency.value=146.83*2; o2.detune.value=4;
+      f.type='lowpass'; f.frequency.value=520; f.Q.value=0.4;
+      g.gain.value=0;
+      const g2=ctx.createGain(); g2.gain.value=0.35;
+      o1.connect(f); o2.connect(g2).connect(f); f.connect(g).connect(ctx.destination);
+      o1.start(); o2.start();
+      drone={o1,o2,g};
+      return drone;
+    }
+    function droneTo(gain, freq, dur){
+      const d=ensureDrone(), t=ctx.currentTime;
+      for(const [param,val] of [[d.g.gain,gain],[d.o1.frequency,freq],[d.o2.frequency,freq*2]]){
+        param.cancelScheduledValues(t);
+        param.setValueAtTime(param.value,t);
+        param.linearRampToValueAtTime(val, t+Math.max(0.05,dur));
+      }
+    }
+    function cue(p, mode){
+      if(!on() || !unlock()) return;
+      const t=ctx.currentTime+0.02;
+      if(mode==='wimhof'){
+        if(p.kind==='inhale') breath('in', p.dur);
+        else if(p.kind==='exhale') breath('out', Math.min(p.dur,0.9));
+        else if(p.kind==='retain') bell(264,0.9,t,3.4);
+        else if(p.kind==='recover') bell(396,0.8,t);
+        else if(p.kind==='rest') bell(528,0.6,t);
+        else if(p.kind==='settle') bell(528,0.5,t);
+        return;
+      }
+      if(p.kind==='inhale') bell(587.33,0.7,t);
+      else if(p.kind==='exhale') bell(392,0.7,t);
+      else if(p.kind==='hold'||p.kind==='holdout') bell(493.88,0.42,t,1.8);
+      else if(p.kind==='settle') bell(528,0.5,t);
+      if(state.sound==='tone'){
+        if(p.kind==='inhale') droneTo(0.085, 220, p.dur);
+        else if(p.kind==='exhale') droneTo(0.02, 146.83, p.dur);
+        else if(p.kind==='hold') droneTo(0.07, 220, 0.5);
+        else if(p.kind==='holdout') droneTo(0.015, 146.83, 0.5);
+      }else if(drone){ droneTo(0, drone.o1.frequency.value, 0.5); }
+    }
+    function rest(){ if(drone && ctx) droneTo(0, drone.o1.frequency.value, 0.8); }
+    function finish(){
+      if(!on() || !unlock()) return;
+      rest();
+      const t=ctx.currentTime+0.05;
+      bell(528,1,t,3.4); bell(528,.7,t+1.8,3.4); bell(528,.45,t+3.6,3.4);
+    }
+    return {unlock,cue,rest,finish};
+  })();
+
+  // ---------- wake lock ----------
+  let lock=null;
+  async function keepAwake(on){
+    try{
+      if(on){ if(!lock && navigator.wakeLock){ lock=await navigator.wakeLock.request('screen'); lock.addEventListener('release',()=>{ lock=null; }); } }
+      else if(lock){ const l=lock; lock=null; await l.release(); }
+    }catch(e){}
+  }
+
+  // ---------- wiring ----------
+  startBtn.addEventListener('click', ()=>{
+    if(run.status==='running'){ cur().kind==='retain' ? endRetention() : pause(); }
+    else begin();
+  });
+  resetBtn.addEventListener('click', reset);
+  $('vessel').addEventListener('click', ()=>{
+    if(run.status==='running' && cur().kind==='retain') endRetention();
+    else reveal();
+  });
+  soundBtn.addEventListener('click', toggleSound);
+  fsBtn.addEventListener('click', ()=>setFocus(!state.focus));
+  $('toast-close').addEventListener('click', hideToast);
+  doneEl.addEventListener('click', dismiss);
+  const onActivity = ()=>{ if(state.focus) reveal(); };
+  document.addEventListener('pointermove', onActivity, {passive:true});
+  document.addEventListener('pointerdown', onActivity, {passive:true});   // touch: tap anywhere to bring the controls back
+  document.addEventListener('keydown', e=>{
+    if(e.target.tagName==='INPUT') return;
+    if(state.focus) reveal();
+    if(run.status==='done'){ if(e.code==='Space'||e.key==='Escape'||e.key==='Enter') dismiss(); return; }
+    if(e.code==='Space'||e.key==='Enter'){
+      e.preventDefault();
+      if(run.status==='running'){ cur().kind==='retain' ? endRetention() : pause(); } else begin();
+    }
+    else if(e.key==='f'||e.key==='F'){ setFocus(!state.focus); }
+    else if(e.key==='m'||e.key==='M'){ toggleSound(); }
+    else if(e.key==='r'||e.key==='R'){ reset(); }
+    else if(e.key==='Escape'){
+      if(!toastEl.hidden) hideToast();
+      else if(state.focus) setFocus(false);
+    }
+  });
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden) return;
+    if(run.status==='running'){ tick(); keepAwake(true); }
+  });
+
+  // ---------- boot ----------
+  load();
+  buildSettings();
+  render();
+  if(state.mode==='wimhof') showToast();
+})();
+</script>
+</body>
+</html>
