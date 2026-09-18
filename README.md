@@ -27,7 +27,7 @@ python3 -m http.server 8000
 
 - **Three practices** — coherence, box, and Wim Hof — each with its own controls.
 - **A pacing orb** that grows on the inhale and shrinks on the exhale, ringed by a
-  progress arc. The orb shifts colour by phase: blue while breathing in, green
+  progress arc. The orb shifts color by phase: blue while breathing in, green
   while breathing out, sand while holding.
 - **Whole breaths, always.** You set a total time and the app rounds up to the next
   complete cycle rather than cutting one short, so a five minute session at 5.5
@@ -35,7 +35,7 @@ python3 -m http.server 8000
   before you start.
 - **Guidance that changes with the phase**, one line at a time, in the space the
   options leave behind once a session starts.
-- **Synthesised sound.** No audio files — bells and an optional drifting tone are
+- **Synthesized sound.** No audio files — bells and an optional drifting tone are
   generated in the browser.
 - **A session count** kept locally, shown in the header and on the closing screen.
 
@@ -101,7 +101,7 @@ a dismissible notice that appears whenever you select that practice:
 ![The Wim Hof screen in dark theme with the safety notice in the lower right corner](screenshots/wimhof.png)
 
 > Sit or lie down somewhere safe. This breathing causes light-headedness by design.
-> Never practise in or near water, while driving, or standing up. If you are
+> Never practice in or near water, while driving, or standing up. If you are
 > pregnant or have epilepsy, a heart condition, or high blood pressure, check with
 > a doctor first. Stop if you feel unwell.
 
@@ -177,9 +177,9 @@ icon and the sound row can never disagree.
 - **Motion.** Under `prefers-reduced-motion` the glow, the closing animation, and
   the button lift are dropped. The orb still scales, since that motion *is* the
   pacer.
-- **Centring.** The countdown is optically centred at runtime rather than by its
+- **Centering.** The countdown is optically centered at runtime rather than by its
   box. Monospace digits have uneven side bearings, so at full size `10:00` sits
-  almost 3px right of true centre while `40` sits under a fifth of a pixel off. A
+  almost 3px right of true center while `40` sits under a fifth of a pixel off. A
   fixed nudge would be wrong for nearly every value, so the ink is measured per
   string and the difference is corrected.
 
