@@ -193,8 +193,22 @@ icon and the sound row can never disagree.
 
 ## Deploying
 
-The live copy is a manual copy. Both `index.html` and `fonts.css` are duplicated
-into the personal site repo at `sites/breathe/`, where Jekyll passes them through
-untouched because they have no front matter, and the page is listed from
-`_data/experiments.yml`. Copy both files or the type falls back to system fonts.
-After changing anything here, re-copy, or the two will drift.
+Pushing a change to `index.html` or `fonts.css` on `main` syncs it to the site
+automatically. `.github/workflows/sync-to-site.yml` stamps a provenance header
+onto the page, copies the font bundle byte for byte, and commits both to the
+personal site repo at `sites/breathe/`, which in turn trips that repo's own
+build-and-deploy workflow. Jekyll passes both files through untouched because
+they have no front matter, and `_data/experiments.yml` lists the page on the
+experiments page.
+
+Both files sync together, since the page loads the stylesheet from beside itself
+and would otherwise fall back to system fonts. The sync refuses to run if
+`fonts.css` goes missing or if the page grows front matter, and it stops before
+pushing if anything outside `sites/breathe/` differs.
+
+Comparison ignores the header, so a re-run on an unchanged app reports no change
+rather than manufacturing a commit whose only difference is the date.
+
+One thing it does not cover: the thumbnail at `images/experiments/breathe.jpg`
+in the site repo is a still of the app, and only needs redoing if the design
+changes noticeably. Regenerate it and run that repo's `tools/optimize-images.sh`.
