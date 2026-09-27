@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Breathe</title>
-<meta name="description" content="A quiet breathing pacer: coherence breathing, box breathing, and the Wim Hof method.">
+<meta name="description" content="A quiet breathing pacer: coherence breathing, box breathing, 4-7-8 breathing, and the Wim Hof method.">
 <link rel="stylesheet" href="fonts.css">
 <style>
 :root{
@@ -375,6 +375,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
     <nav class="modes" id="modes" aria-label="Breathing practice">
       <button class="mode" data-mode="coherence" aria-pressed="true">Coherence</button>
       <button class="mode" data-mode="box" aria-pressed="false">Box</button>
+      <button class="mode" data-mode="478" aria-pressed="false">4-7-8</button>
       <button class="mode" data-mode="wimhof" aria-pressed="false">Wim Hof</button>
     </nav>
     <div class="topright">
@@ -445,6 +446,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
       </div>
     </div>
 
+    <div class="panel" data-panel="478" hidden>
+      <div class="group"><span class="eyebrow">Breaths</span><span id="f-breaths"></span></div>
+      <div class="group"><span class="eyebrow">Pace</span><span id="f-pace"></span></div>
+    </div>
+
     <div class="panel" data-panel="wimhof" hidden>
       <div class="group"><span class="eyebrow">Breaths</span><span id="wh-breaths"></span></div>
       <div class="group"><span class="eyebrow">Rounds</span><span id="wh-rounds"></span></div>
@@ -488,6 +494,11 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
   const COH_RHYTHMS  = [[4,4],[5,5],[5.5,5.5],[6,6],[4,6]];
   const BOX_PATTERNS = [[3,3,3,3],[4,4,4,4],[5,5,5,5],[6,6,6,6]];
   const LENGTHS      = [1,2,3,4,5,6,8,10,12,15,20,25,30,45,60];
+  // 4-7-8: the ratio is the practice, so pace stretches the count, not the pattern
+  const F_PATTERN    = [4,7,8];
+  const F_BREATHS    = [4,6,8];
+  const F_PACE       = {slow:1.25, standard:1, quick:0.75};
+  const F_PACE_LIST  = [['slow','Slow'],['standard','Standard'],['quick','Quick']];
   const WH_BREATHS   = [20,30,35,40];
   const WH_ROUNDS    = [1,2,3,4];
   const WH_PACE      = {slow:[2.2,1.8], steady:[1.7,1.3], brisk:[1.3,1.0]};
@@ -504,6 +515,12 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
     'Let the shoulders be heavy. Let the hands be still.',
     'If the mind wanders, come back to the count. Kindly.',
   ];
+  const F_TEXT = {
+    settle:  'Tongue behind the upper front teeth. Empty the lungs through the mouth.',
+    inhale:  'In quietly through the nose.',
+    hold:    'Hold. Stay soft around the breath.',
+    exhale:  'Out through the mouth with a whoosh, around the tongue.',
+  };
   const WH_TEXT = {
     settle:      'Sit or lie down somewhere safe. Never near water.',
     breathe:     'Full breath in, belly then chest. Let it fall out with a soft "hah". No force.',
@@ -522,6 +539,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
     mode:'coherence',
     coh:{inhale:5.5, exhale:5.5, custom:false, minutes:5},
     box:{inhale:4, hold1:4, exhale:4, hold2:4, custom:false, minutes:5},
+    f478:{breaths:4, pace:'standard'},
     wh:{breaths:30, rounds:3, pace:'steady'},
     sound:'bells', lastSound:'bells',
     focus:false,
@@ -537,7 +555,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
         if(state[k] && typeof state[k]==='object') Object.assign(state[k], s[k]); else state[k]=s[k];
       }
     }catch(e){}
-    if(!['coherence','box','wimhof'].includes(state.mode)) state.mode='coherence';
+    if(!['coherence','box','478','wimhof'].includes(state.mode)) state.mode='coherence';
     state.coh.inhale = clamp(+state.coh.inhale||5.5, 1, 20);
     state.coh.exhale = clamp(+state.coh.exhale||5.5, 1, 20);
     state.coh.minutes = clamp(+state.coh.minutes||5, 1, 60);
@@ -546,6 +564,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
     state.box.exhale = clamp(+state.box.exhale||4, 1, 20);
     state.box.hold2  = clamp(+state.box.hold2||0, 0, 30);
     state.box.minutes = clamp(+state.box.minutes||5, 1, 60);
+    if(!F_BREATHS.includes(state.f478.breaths)) state.f478.breaths=4;
+    if(!F_PACE[state.f478.pace]) state.f478.pace='standard';
     if(!WH_BREATHS.includes(state.wh.breaths)) state.wh.breaths=30;
     if(!WH_ROUNDS.includes(state.wh.rounds)) state.wh.rounds=3;
     if(!WH_PACE[state.wh.pace]) state.wh.pace='steady';
@@ -643,6 +663,17 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
       }
       return {phases:ph, cycles:cyc, practice:cyc*len};
     }
+    if(state.mode==='478'){
+      const {breaths,pace}=state.f478, u=F_PACE[pace];
+      const [a,b,c]=F_PATTERN.map(n=>n*u);
+      ph.push({kind:'settle', label:'Breathe out', dur:5});
+      for(let i=1;i<=breaths;i++){
+        ph.push({kind:'inhale', label:'Breathe in',  dur:a, unit:u, cycle:i, of:breaths});
+        ph.push({kind:'hold',   label:'Hold',        dur:b, unit:u, cycle:i, of:breaths});
+        ph.push({kind:'exhale', label:'Breathe out', dur:c, unit:u, cycle:i, of:breaths});
+      }
+      return {phases:ph, cycles:breaths, practice:breaths*(a+b+c)};
+    }
     const {breaths,rounds,pace}=state.wh;
     const [pi,po]=WH_PACE[pace];
     ph.push({kind:'settle', label:'Settle in', dur:6, round:1});
@@ -665,6 +696,10 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
     if(state.mode==='box'){
       const p=buildPlan(), b=state.box;
       return {num:fmt(p.practice), sub:p.cycles+' cycles · '+[b.inhale,b.hold1,b.exhale,b.hold2].map(num).join(' · ')};
+    }
+    if(state.mode==='478'){
+      const p=buildPlan(), u=F_PACE[state.f478.pace];
+      return {num:fmt(p.practice), sub:p.cycles+' breaths · 4 · 7 · 8 · '+num(u)+' s count'};
     }
     const [pi,po]=WH_PACE[state.wh.pace];
     const perRound=state.wh.breaths*(pi+po);
@@ -762,6 +797,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
 
   function promptFor(p){
     if(p.kind==='settle') return state.mode==='wimhof' ? WH_TEXT.settle : 'Sit comfortably. Let the shoulders drop.';
+    if(state.mode==='478') return F_TEXT[p.kind] || '';
     if(state.mode==='wimhof'){
       if(p.kind==='inhale'||p.kind==='exhale') return p.breath>=20 ? WH_TEXT.breatheLate : WH_TEXT.breathe;
       return WH_TEXT[p.kind] || '';
@@ -795,7 +831,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
       else if(p.kind==='recover'){ n=String(Math.ceil(p.dur-el)); sub='round '+p.round+' of '+run.plan.rounds; ring=1-q; }
       else { n=String(Math.ceil(p.dur-el)); sub = p.kind==='rest' ? 'get ready' : ''; ring=0; }
     }else{
-      n=String(Math.ceil(p.dur-el));
+      // 4-7-8 counts in counts, not seconds, so a slow or quick pace still reads 4, 7, 8
+      const u=p.unit||1;
+      n=String(Math.ceil((p.dur-el)/u - 1e-6));
       if(p.cycle) sub='breath '+p.cycle+' of '+p.of;
       const done = run.plan.phases.slice(1, run.i).reduce((a,x)=>a+x.dur,0) + (p.kind==='settle'?0:Math.min(el,p.dur));
       ring = clamp(done/run.plan.practice, 0, 1);
@@ -831,7 +869,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
     }else{
       const sm=summary();
       startBtn.textContent='Begin'; resetBtn.disabled=true;
-      phaseEl.textContent = {coherence:'Coherence', box:'Box breathing', wimhof:'Wim Hof'}[state.mode];
+      phaseEl.textContent = {coherence:'Coherence', box:'Box breathing', '478':'4-7-8', wimhof:'Wim Hof'}[state.mode];
       setNum(sm.num); subEl.textContent=sm.sub;
       orb.style.setProperty('--s', String(S_IDLE));
       ringFill.style.strokeDashoffset='1';
@@ -881,6 +919,9 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
       const k=b.dataset.len; state[k].minutes = stepLen(state[k].minutes, +b.dataset.dir); changed();
     }));
 
+    ui.fBreaths = F_BREATHS.map(n=>{ const p=pill(String(n), ()=>{ state.f478.breaths=n; changed(); }); $('f-breaths').appendChild(p); return p; });
+    ui.fPace    = F_PACE_LIST.map(([k,l])=>{ const p=pill(l, ()=>{ state.f478.pace=k; changed(); }); $('f-pace').appendChild(p); return p; });
+
     ui.whBreaths = WH_BREATHS.map(n=>{ const p=pill(String(n), ()=>{ state.wh.breaths=n; changed(); }); $('wh-breaths').appendChild(p); return p; });
     ui.whRounds  = WH_ROUNDS.map(n=>{ const p=pill(String(n), ()=>{ state.wh.rounds=n; changed(); }); $('wh-rounds').appendChild(p); return p; });
     ui.whPace    = WH_PACE_LIST.map(([k,l])=>{ const p=pill(l, ()=>{ state.wh.pace=k; changed(); }); $('wh-pace').appendChild(p); return p; });
@@ -910,6 +951,8 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
     $('box-in').value=num(b.inhale); $('box-h1').value=num(b.hold1); $('box-out').value=num(b.exhale); $('box-h2').value=num(b.hold2);
     $('box-len').textContent = b.minutes+' min';
 
+    ui.fBreaths.forEach((p,i)=>p.setAttribute('aria-pressed', String(F_BREATHS[i]===state.f478.breaths)));
+    ui.fPace.forEach((p,i)=>p.setAttribute('aria-pressed', String(F_PACE_LIST[i][0]===state.f478.pace)));
     ui.whBreaths.forEach((p,i)=>p.setAttribute('aria-pressed', String(WH_BREATHS[i]===state.wh.breaths)));
     ui.whRounds.forEach((p,i)=>p.setAttribute('aria-pressed', String(WH_ROUNDS[i]===state.wh.rounds)));
     ui.whPace.forEach((p,i)=>p.setAttribute('aria-pressed', String(WH_PACE_LIST[i][0]===state.wh.pace)));
@@ -969,7 +1012,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--sea);outline-of
 
   // ---------- done overlay ----------
   function showDone(secs){
-    const name={coherence:'coherence breathing', box:'box breathing', wimhof:'Wim Hof breathing'}[state.mode];
+    const name={coherence:'coherence breathing', box:'box breathing', '478':'4-7-8 breathing', wimhof:'Wim Hof breathing'}[state.mode];
     if(state.mode==='wimhof'){
       const r=run.retentions;
       doneSub.textContent = run.plan.rounds+(run.plan.rounds===1?' round':' rounds')+' of '+name+'.';

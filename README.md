@@ -1,6 +1,7 @@
 # Breathe
 
-A quiet breathing pacer: coherence breathing, box breathing, and the Wim Hof method.
+A quiet breathing pacer: coherence breathing, box breathing, 4-7-8 breathing, and the
+Wim Hof method.
 
 **Live at [ryanarnaudin.com/sites/breathe/](https://ryanarnaudin.com/sites/breathe/)**
 
@@ -25,7 +26,7 @@ python3 -m http.server 8000
 
 ## What it does
 
-- **Three practices** — coherence, box, and Wim Hof — each with its own controls.
+- **Four practices** — coherence, box, 4-7-8, and Wim Hof — each with its own controls.
 - **A pacing orb** that grows on the inhale and shrinks on the exhale, ringed by a
   progress arc. The orb shifts color by phase: blue while breathing in, green
   while breathing out, sand while holding.
@@ -68,6 +69,21 @@ takes all four numbers separately, and a hold set to zero is skipped entirely, s
 4 · 0 · 6 · 0 gives you a plain long-exhale pattern.
 
 Both of the above take a session length from 1 minute up to an hour.
+
+### 4-7-8
+
+In through the nose for four counts, hold for seven, out through the mouth for
+eight. A short opening phase has you empty the lungs first. Sessions are counted
+in breaths rather than minutes, since the usual advice is to start with four and
+work up to eight.
+
+| Setting | Options |
+|---|---|
+| Breaths | 4, 6, 8 |
+| Pace | Slow (1.25s a count), Standard (1s), Quick (0.75s) |
+
+The pattern is fixed and the pace stretches the count, so the clock reads 4, 7,
+8 at every pace. Quick is there if the seven-count hold is too long at first.
 
 ### Wim Hof
 
