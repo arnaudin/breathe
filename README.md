@@ -6,7 +6,7 @@ Wim Hof method.
 **Live at [ryanarnaudin.com/sites/breathe/](https://ryanarnaudin.com/sites/breathe/)**
 
 Two files, no dependencies, no build step, no network. It is a guided timer rather
-than a reading page — you set a length, press Begin, and follow an orb that swells
+than a reading page: you set a length, press Begin, and follow an orb that swells
 and settles with the breath.
 
 ![The idle screen in light theme: a pale orb reading five minutes and twenty-eight breaths, with rhythm and length options below](screenshots/idle.png)
@@ -16,7 +16,7 @@ and settles with the breath.
 Open [ryanarnaudin.com/sites/breathe/](https://ryanarnaudin.com/sites/breathe/),
 pick a practice, and press Begin.
 
-To run it locally instead, open `index.html` in a browser — double-click works,
+To run it locally instead, open `index.html` in a browser. Double-click works,
 because the fonts are embedded rather than fetched. Keep `fonts.css` next to it.
 Or serve the folder if you prefer a URL:
 
@@ -26,7 +26,7 @@ python3 -m http.server 8000
 
 ## What it does
 
-- **Four practices** — coherence, box, 4-7-8, and Wim Hof — each with its own controls.
+- **Four practices** (coherence, box, 4-7-8, and Wim Hof), each with its own controls.
 - **A pacing orb** that grows on the inhale and shrinks on the exhale, ringed by a
   progress arc. The orb shifts color by phase: blue while breathing in, green
   while breathing out, sand while holding.
@@ -36,7 +36,7 @@ python3 -m http.server 8000
   before you start.
 - **Guidance that changes with the phase**, one line at a time, in the space the
   options leave behind once a session starts.
-- **Synthesized sound.** No audio files — bells and an optional drifting tone are
+- **Synthesized sound.** No audio files; bells and an optional drifting tone are
   generated in the browser.
 - **A session count** kept locally, shown in the header and on the closing screen.
 
@@ -104,7 +104,7 @@ short recovery hold. Built against the protocol as transcribed in my notes:
 | Rounds | 1, 2, 3, 4 |
 | Pace | Slow (2.2s in, 1.8s out), Steady (1.7 / 1.3), Brisk (1.3 / 1.0) |
 
-The retention is open-ended and counts up — it ends when you say so, by pressing
+The retention is open-ended and counts up; it ends when you say so, by pressing
 the button, tapping the orb, or hitting space. Each round's retention time is
 reported on the closing screen. A 15 second recovery hold follows, then the next
 round begins after a short rest.
@@ -137,7 +137,7 @@ else out of the layout:
 
 Move the mouse, tap, or press a key and the controls fade back for a second and a
 half. While a session is running a reveal offers only Reset and Pause, plus the
-sound and exit icons — the settings would only reset the session, so they stay
+sound and exit icons. The settings would only reset the session, so they stay
 away until you do. It asks for real browser fullscreen too, and falls back to the
 bare layout where that is refused, such as iOS Safari.
 
@@ -178,7 +178,7 @@ icon and the sound row can never disagree.
   you interact with it, so audio is armed when you press Begin.
 - **Sessions do not survive a reload.** Unlike the sibling
   [tea timer](https://github.com/arnaudin/tea-timer), only your settings and
-  totals persist — a session in progress is lost if you refresh.
+  totals persist; a session in progress is lost if you refresh.
 - **What is stored.** Practice, every per-practice setting, sound choice, focus
   preference, and the session log live in `localStorage` under `breathe.v1`.
   Nothing leaves the browser.
@@ -186,7 +186,7 @@ icon and the sound row can never disagree.
 - **Offline.** Nothing is fetched at runtime. Both typefaces are subset to latin,
   embedded in `fonts.css` as data URIs, and carry a full variable weight axis.
   Verified working from `file://`, where a separate font request would be refused.
-- **Browsers.** Modern evergreen only — it leans on `color-mix()` in OKLab and
+- **Browsers.** Modern evergreen only; it leans on `color-mix()` in OKLab and
   container queries, so roughly Safari 16.4+, Chrome 111+, Firefox 113+.
 - **Themes.** Light and dark are both designed; the page follows your system
   setting.
@@ -206,6 +206,7 @@ icon and the sound row can never disagree.
 | `index.html` | The whole application |
 | `fonts.css` | Azeret Mono and Karla, subset and embedded as data URIs |
 | `screenshots/` | Images used by this README |
+| `LICENSE` | MIT license |
 
 ## Deploying
 
@@ -228,3 +229,8 @@ rather than manufacturing a commit whose only difference is the date.
 One thing it does not cover: the thumbnail at `images/experiments/breathe.jpg`
 in the site repo is a still of the app, and only needs redoing if the design
 changes noticeably. Regenerate it and run that repo's `tools/optimize-images.sh`.
+
+## License
+
+Code is MIT; see [LICENSE](LICENSE). The two typefaces embedded in `fonts.css`, Azeret Mono
+and Karla, are under the SIL Open Font License 1.1.
